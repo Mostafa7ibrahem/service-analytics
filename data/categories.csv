@@ -1,0 +1,11 @@
+id,name,name_ar,description,description_ar,icon,image_url
+1,كهربا,كهربا,خدمات الكهرباء والإضاءة,Electrical services,⚡,
+2,سباكه,سباكه,تركيب وإصلاح السباكة,Plumbing services,🔧,
+3,نجاره,نجاره,أعمال النجارة والأثاث,Carpentry services,🪚,
+4,صيانه منزليه,صيانه منزليه,صيانة عامة للمنزل,Home maintenance,🏠,
+5,نظافه,نظافه,خدمات التنظيف للمنازل والمكاتب,Cleaning services,🧹,
+6,دهان,دهان,دهان وديكور,Painting services,🎨,
+7,تكييف,تكييف,تركيب وصيانة التكييف,AC services,❄️,
+8,نقل عفش,نقل عفش,خدمات النقل والترحيل,Moving services,🚛,
+9,حدائق,حدائق,تنسيق وصيانة الحدائق,Gardening services,🌿,
+10,كمبيوتر,كمبيوتر,دعم فني وصيانة كمبيوتر,IT support,💻,
