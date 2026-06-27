@@ -1271,6 +1271,97 @@ def page_ml():
             with st.expander("📋 View Assignments — عرض التصنيفات"):
                 st.dataframe(df_assign, use_container_width=True, hide_index=True)
 
+    # ────────────────────────────────
+    #  5. DEMAND FORECAST
+    # ────────────────────────────────
+    dfc = ml.get("demand_forecast")
+    if dfc:
+        st.markdown("<div class='section-title'>📈 Demand Forecast — توقعات الطلب الشهر القادم</div>", unsafe_allow_html=True)
+        dfc_data = [{"service": d["service"],
+                     "current": d["current"],
+                     "predicted": d["predicted"],
+                     "direction": d["direction"],
+                     "slope": d.get("trend_slope", 0)} for d in dfc]
+        if dfc_data:
+            df_fc = pd.DataFrame(dfc_data)
+            df_fc["marker"] = df_fc["direction"].map({"up": "🟢", "down": "🔴"})
+            st.caption(f"📊 {len(dfc)} services • 🟢 up • 🔴 down — المتوقع للشهر القادم مقابل الشهر الحالي")
+            col_f1, col_f2 = st.columns([2, 1])
+            with col_f1:
+                fig = go.Figure()
+                for s in dfc:
+                    months = s.get("months", [])
+                    if months:
+                        df_m = pd.DataFrame(months)
+                        fig.add_trace(go.Scatter(
+                            x=df_m["_month"], y=df_m["orders"],
+                            mode="lines+markers", name=s["service"][:12],
+                            line=dict(width=2),
+                        ))
+                fig.update_layout(height=400, xaxis_title="Month", yaxis_title="Orders",
+                                  paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                  font=dict(color=_theme_colors()["font"], size=10),
+                                  legend=dict(orientation="h", y=1.1, font=dict(size=8)))
+                wrap_chart(fig)
+            with col_f2:
+                sel_svc_fc = st.selectbox("Service detail", [d["service"] for d in dfc])
+                for d in dfc:
+                    if d["service"] == sel_svc_fc:
+                        st.metric("Current", d["current"])
+                        st.metric("Forecast Next Month", d["predicted"],
+                                  delta=d["predicted"] - d["current"])
+                        direction_ar = "↑ صاعد" if d["direction"] == "up" else "↓ هابط"
+                        st.caption(f"Trend: {direction_ar} (slope {d.get('trend_slope',0):+.1f}/month)")
+                        break
+
+    # ────────────────────────────────
+    #  6. OPTIMAL PRICING ZONES
+    # ────────────────────────────────
+    op = ml.get("optimal_pricing")
+    if op:
+        st.markdown("<div class='section-title'>💰 Optimal Pricing Zones — نطاق السعر الأمثل لكل خدمة</div>", unsafe_allow_html=True)
+        st.caption("السعر الأمثل = متوسط سعر العمال ذوي التقييم العالي (أعلى 33%) — الأسعار بالجنيه")
+        df_op = pd.DataFrame(op)
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=df_op["profession"], y=df_op["p25"],
+                             name="Q1 (25%)", marker_color="rgba(52,152,219,0.4)"))
+        fig.add_trace(go.Bar(x=df_op["profession"], y=df_op["p50"],
+                             name="Median (50%)", marker_color="rgba(52,152,219,0.6)"))
+        fig.add_trace(go.Bar(x=df_op["profession"], y=df_op["p75"],
+                             name="Q3 (75%)", marker_color="rgba(52,152,219,0.8)"))
+        fig.add_trace(go.Scatter(x=df_op["profession"], y=df_op["opt_price"],
+                                 mode="markers", name="⭐ Optimal Price",
+                                 marker=dict(color="#e74c3c", size=14, symbol="star")))
+        fig.update_layout(barmode="group", height=400,
+                          paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                          font=dict(color=_theme_colors()["font"], size=10),
+                          legend=dict(orientation="h", y=1.15))
+        wrap_chart(fig)
+        with st.expander("📋 Full Pricing Table"):
+            st.dataframe(df_op, use_container_width=True, hide_index=True)
+
+    # ────────────────────────────────
+    #  7. GEOGRAPHIC OPPORTUNITY
+    # ────────────────────────────────
+    geo = ml.get("geographic_opportunity")
+    if geo:
+        st.markdown("<div class='section-title'>🗺️ Geographic Opportunity — الفرصة الجغرافية</div>", unsafe_allow_html=True)
+        df_geo = pd.DataFrame(geo)
+        st.caption("الفجوة = (الطلبات) - (العمال × 5) — المحافظات ذات الفجوة الأكبر تحتاج عمال أكثر")
+        fig = px.bar(df_geo.head(15), x="governorate", y=["demand", "workers"],
+                     barmode="group", title="Demand vs Workers by Governorate",
+                     color_discrete_map={"demand": "#3498db", "workers": "#2ecc71"})
+        fig.update_layout(height=400,
+                          paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                          font=dict(color=_theme_colors()["font"], size=10))
+        wrap_chart(fig)
+        df_geo_display = df_geo.copy()
+        max_gap = df_geo_display["gap"].max()
+        df_geo_display["need"] = df_geo_display["gap"].apply(
+            lambda x: "🔴 High" if x > max_gap * 0.5 else "🟡 Medium" if x > 0 else "🟢 Good")
+        with st.expander("📋 All Governorates"):
+            st.dataframe(df_geo_display, use_container_width=True, hide_index=True)
+
 
 # ──────────────────────────────────────
 #  PAGE 6 — CORRELATIONS

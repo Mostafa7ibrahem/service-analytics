@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.cluster import KMeans
 from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, classification_report
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.linear_model import LinearRegression
 
 from .preprocessing import clean_for_ml
 
@@ -68,6 +69,12 @@ def train_models(dfs):
     if m6: res["worker_clustering"] = m6
     m7 = generate_recommendations(dfs, res)
     if m7: res["recommendations"] = m7
+    m8 = demand_forecast(dfs)
+    if m8: res["demand_forecast"] = m8
+    m9 = optimal_pricing_zones(dfs)
+    if m9: res["optimal_pricing"] = m9
+    m10 = geographic_opportunity(dfs)
+    if m10: res["geographic_opportunity"] = m10
     return res
 
 
@@ -474,3 +481,108 @@ def generate_recommendations(dfs, ml_results):
         return recs[:20]
     except Exception:
         return []
+
+
+def demand_forecast(dfs):
+    try:
+        o = dfs.get("orders")
+        if o is None or len(o) < 10: return None
+        cat_c = _c(o, "category")
+        if not cat_c: return None
+        o = o.copy()
+        dc = _c(o, "created_at")
+        if dc: o["_month"] = o[dc].dt.to_period("M").astype(str)
+        else: return None
+        forecast = []
+        for svc in o[cat_c].unique():
+            svc_o = o[o[cat_c] == svc]
+            ts = svc_o.groupby("_month").size().reset_index(name="orders")
+            ts = ts.sort_values("_month")
+            if len(ts) < 2: continue
+            ts["t"] = range(len(ts))
+            X = ts[["t"]].values; y = ts["orders"].values
+            lr = LinearRegression().fit(X, y)
+            next_t = len(ts)
+            pred = max(0, round(lr.predict([[next_t]])[0]))
+            ts["_pred"] = lr.predict(ts[["t"]].values)
+            ts["_pred"] = ts["_pred"].clip(0)
+            current = y[-1]
+            direction = "up" if pred > current else "down"
+            forecast.append({
+                "service": svc,
+                "current": int(current),
+                "predicted": pred,
+                "direction": direction,
+                "months": ts.to_dict("records"),
+                "trend_slope": round(lr.coef_[0], 2),
+            })
+        if not forecast: return None
+        forecast.sort(key=lambda x: x["predicted"], reverse=True)
+        return forecast
+    except Exception: return None
+
+
+def optimal_pricing_zones(dfs):
+    try:
+        w = dfs.get("workers")
+        if w is None or len(w) < 10: return None
+        prof = _c(w, "profession")
+        hr = _c(w, "hourly_rate")
+        ar = _c(w, "average_rating")
+        cj = _c(w, "completed_jobs")
+        if not all([prof, hr, ar]): return None
+        d = w[[prof, hr, ar]].dropna()
+        if len(d) < 10: return None
+        d.columns = ["profession", "hourly_rate", "avg_rating"]
+        zones = []
+        for p in d["profession"].unique():
+            sub = d[d["profession"] == p]
+            if len(sub) < 5: continue
+            q = sub["hourly_rate"].quantile([0.25, 0.5, 0.75])
+            rated_high = sub[sub["avg_rating"] >= sub["avg_rating"].quantile(0.66)]
+            opt_price = rated_high["hourly_rate"].median() if len(rated_high) > 2 else q[0.5]
+            zones.append({
+                "profession": p,
+                "workers": len(sub),
+                "p25": round(q[0.25], 1), "p50": round(q[0.5], 1), "p75": round(q[0.75], 1),
+                "opt_price": round(opt_price, 1),
+                "avg_rating": round(sub["avg_rating"].mean(), 2),
+                "top_avg_rating": round(rated_high["avg_rating"].mean(), 2) if len(rated_high) > 2 else 0,
+            })
+        return zones
+    except Exception: return None
+
+
+def geographic_opportunity(dfs):
+    try:
+        o = dfs.get("orders")
+        w = dfs.get("workers")
+        u = dfs.get("users")
+        if o is None or u is None or w is None: return None
+        og = _c(o, "client_username")
+        wg = _c(w, "governorate")
+        ug = _c(u, "governorate")
+        uu = _c(u, "username")
+        if not all([og, ug, wg, uu]): return None
+        cl_gov = u[[uu, ug]].copy().dropna()
+        cl_gov.columns = ["username", "governorate"]
+        o2 = o.merge(cl_gov, left_on=og, right_on="username", how="left")
+        if "governorate" not in o2.columns: return None
+        demand = o2["governorate"].value_counts()
+        supply = w[wg].value_counts()
+        all_gov = sorted(set(list(demand.index) + list(supply.index)))
+        result = []
+        for g in all_gov:
+            d = int(demand.get(g, 0))
+            s = int(supply.get(g, 0))
+            gap = d - s * 5
+            result.append({
+                "governorate": g,
+                "demand": d,
+                "workers": s,
+                "gap": max(0, gap),
+                "ratio": round(d / s, 1) if s > 0 else 999,
+            })
+        result.sort(key=lambda x: x["gap"], reverse=True)
+        return result
+    except Exception: return None
