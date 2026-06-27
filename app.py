@@ -1230,7 +1230,6 @@ def page_ml():
     # ────────────────────────────────
     #  1. REGRESSION MODELS
     # ────────────────────────────────
-    st.markdown("<div class='section-divider'></div>")
     st.markdown("<div class='section-title'>🔮 Regression Models — نماذج التنبؤ الرقمي</div>", unsafe_allow_html=True)
     has_reg = False
     r1, r2 = st.columns(2)
