@@ -173,15 +173,81 @@ def _theme_css():
 
     .section-title {{
         color: {text_primary};
-        font-size: 0.95rem;
+        font-size: 1rem;
         font-weight: 700;
         letter-spacing: 0.3px;
-        margin: 24px 0 12px 0;
-        padding: 10px 16px;
-        border-bottom: 2px solid {section_border};
+        margin: 28px 0 14px 0;
+        padding: 12px 20px;
+        border-bottom: 3px solid {section_border};
         text-align: center;
         background: {section_bg};
-        border-radius: 8px 8px 0 0;
+        border-radius: 12px 12px 0 0;
+        position: relative;
+    }}
+    .section-title::after {{
+        content: '';
+        position: absolute; bottom: -3px; left: 50%;
+        transform: translateX(-50%);
+        width: 60px; height: 3px;
+        background: linear-gradient(90deg, #2ecc71, #3498db);
+        border-radius: 0 0 4px 4px;
+    }}
+
+    .rec-card {{
+        background: {card_bg};
+        border: 1px solid {card_border};
+        border-radius: 14px;
+        padding: 16px;
+        margin: 8px 0;
+        transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        position: relative;
+        overflow: hidden;
+        min-height: 130px;
+    }}
+    .rec-card:hover {{
+        transform: translateY(-3px);
+        box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+    }}
+    .rec-card::before {{
+        content: '';
+        position: absolute; top: 0; left: 0;
+        width: 4px; height: 100%;
+        border-radius: 4px 0 0 4px;
+    }}
+    .rec-card.priority-high::before {{ background: linear-gradient(180deg, #e74c3c, #c0392b); }}
+    .rec-card.priority-medium::before {{ background: linear-gradient(180deg, #f39c12, #e67e22); }}
+    .rec-card.priority-low::before {{ background: linear-gradient(180deg, #2ecc71, #27ae60); }}
+
+    .rec-card .rec-icon {{
+        font-size: 1.6rem;
+        margin-bottom: 6px;
+    }}
+    .rec-card .rec-title {{
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: {text_primary};
+        margin-bottom: 6px;
+    }}
+    .rec-card .rec-detail {{
+        font-size: 0.78rem;
+        color: {text_secondary};
+        line-height: 1.5;
+    }}
+    .rec-badge {{
+        display: inline-block;
+        font-size: 0.6rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }}
+
+    .section-divider {{
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(46,204,113,0.15), transparent);
+        margin: 32px 0 8px 0;
     }}
 
     .stButton > button {{
@@ -1114,26 +1180,28 @@ def page_ml():
     # ── Recommendations ──
     recs = ml.pop("recommendations", [])
     if recs:
-        st.markdown("<div class='section-title'>💡 Recommendations — التوصيات المقترحة</div>", unsafe_allow_html=True)
-        prio_map = {"high": "#e74c3c", "medium": "#f39c12", "low": "#2ecc71"}
+        st.markdown("<div class='section-title'>💡 Smart Recommendations — توصيات ذكية مبنية على البيانات</div>", unsafe_allow_html=True)
+        st.caption("مصنفة حسب الأولوية • 🔴 عالية • 🟡 متوسطة • 🟢 منخفضة")
         icon_map = {"Supply Gap": "⚠️", "Over-Supply": "✅", "Top Workers": "🏆",
                      "Completion Insight": "🎯", "Client Retention": "🔄",
                      "Worker Segments": "📊", "Pricing Insight": "💰"}
-        font_color = _theme_colors()["font"]
+        badge_colors = {"high": "#e74c3c", "medium": "#f39c12", "low": "#2ecc71"}
+        badge_text = {"high": "🔴 High Priority", "medium": "🟡 Medium", "low": "🟢 Info"}
         cols = st.columns(min(3, len(recs)))
         for i, rec in enumerate(recs):
-            color = prio_map.get(rec.get("priority", "low"), "#2ecc71")
+            prio = rec.get("priority", "low")
             icon = icon_map.get(rec.get("type", ""), "💡")
+            bc = badge_colors[prio]
+            bt = badge_text[prio]
             with cols[i % 3]:
                 st.markdown(f"""
-                <div style="background:{color}15; border-left:4px solid {color};
-                            border-radius:8px; padding:12px; margin:6px 0; min-height:120px;">
-                    <div style="font-size:1.1rem; font-weight:700; color:{color};">
-                        {icon} {rec.get("title","")}
-                    </div>
-                    <div style="font-size:0.8rem; color:{font_color}; margin-top:6px; opacity:0.8;">
-                        {rec.get("detail","")}
-                    </div>
+                <div class="rec-card priority-{prio}">
+                    <div class="rec-icon">{icon}</div>
+                    <span class="rec-badge" style="background:{bc}20; color:{bc}; border:1px solid {bc}40;">
+                        {bt}
+                    </span>
+                    <div class="rec-title">{rec.get("title","")}</div>
+                    <div class="rec-detail">{rec.get("detail","")}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1162,6 +1230,7 @@ def page_ml():
     # ────────────────────────────────
     #  1. REGRESSION MODELS
     # ────────────────────────────────
+    st.markdown("<div class='section-divider'></div>")
     st.markdown("<div class='section-title'>🔮 Regression Models — نماذج التنبؤ الرقمي</div>", unsafe_allow_html=True)
     has_reg = False
     r1, r2 = st.columns(2)
