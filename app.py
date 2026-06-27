@@ -1111,6 +1111,32 @@ def page_ml():
         st.warning("Not enough data. Need at least 30 completed/cancelled orders.")
         return
 
+    # ── Recommendations ──
+    recs = ml.pop("recommendations", [])
+    if recs:
+        st.markdown("<div class='section-title'>💡 Recommendations — التوصيات المقترحة</div>", unsafe_allow_html=True)
+        prio_map = {"high": "#e74c3c", "medium": "#f39c12", "low": "#2ecc71"}
+        icon_map = {"Supply Gap": "⚠️", "Over-Supply": "✅", "Top Workers": "🏆",
+                     "Completion Insight": "🎯", "Client Retention": "🔄",
+                     "Worker Segments": "📊", "Pricing Insight": "💰"}
+        font_color = _theme_colors()["font"]
+        cols = st.columns(min(3, len(recs)))
+        for i, rec in enumerate(recs):
+            color = prio_map.get(rec.get("priority", "low"), "#2ecc71")
+            icon = icon_map.get(rec.get("type", ""), "💡")
+            with cols[i % 3]:
+                st.markdown(f"""
+                <div style="background:{color}15; border-left:4px solid {color};
+                            border-radius:8px; padding:12px; margin:6px 0; min-height:120px;">
+                    <div style="font-size:1.1rem; font-weight:700; color:{color};">
+                        {icon} {rec.get("title","")}
+                    </div>
+                    <div style="font-size:0.8rem; color:{font_color}; margin-top:6px; opacity:0.8;">
+                        {rec.get("detail","")}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
     # ── Helper ──
     def _show_base_metrics(res, icon):
         c1, c2 = st.columns(2)
