@@ -944,6 +944,18 @@ def page_customer():
                                          categoryarray=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]))
             wrap_chart(fig)
 
+    # ── Orders by Day of Week ──
+    st.markdown("<div class='section-title'>📅 Orders by Day of Week — الطلبات حسب أيام الأسبوع</div>", unsafe_allow_html=True)
+    dow = ins.get("orders_by_dow")
+    if dow:
+        df = pd.DataFrame(dow)
+        fig = px.bar(df, x="dow", y="count", color="count",
+                     color_continuous_scale="greens", text="count")
+        fig.update_traces(textposition="outside")
+        fig.update_layout(xaxis=dict(categoryorder="array",
+                                     categoryarray=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]))
+        wrap_chart(fig)
+
     # ── 3. Cancelled Orders by Service ──
     st.markdown("<div class='section-title'>📉 Cancelled Orders by Service — الطلبات الملغية حسب الخدمة</div>", unsafe_allow_html=True)
     col_g, col_h = st.columns(2)
