@@ -1016,21 +1016,21 @@ def page_ml():
             "expansion":     ("📍", "التوسع الجغرافي", "Where Should We Expand?"),
             "workforce":     ("👷", "تخطيط القوى العاملة", "Workforce Planning"),
             "revenue":       ("💰", "فرص الربح", "Revenue Opportunity"),
-            "retention":     ("👥", "الاحتفاظ بالعملاء", "Customer Retention"),
             "risk":          ("⚠️", "اكتشاف المخاطر", "Business Risk Detection"),
             "future_demand": ("📈", "توقعات الطلب", "Future Demand Forecast"),
-            "advisor":       ("🧠", "المستشار الذكي", "AI Business Advisor"),
+            "advisor":       ("🧠", "", "AI Business Advisor"),
         }
         badge_colors = {"high": "#e74c3c", "medium": "#f39c12", "low": "#2ecc71"}
         badge_text = {"high": "🔴 عالية", "medium": "🟡 متوسطة", "low": "🟢 منخفضة"}
-        order = ["expansion", "workforce", "revenue", "retention", "risk", "future_demand", "advisor"]
+        order = ["expansion", "workforce", "revenue", "risk", "future_demand", "advisor"]
 
         for t in order:
             group = [r for r in recs if r.get("type") == t]
             if not group:
                 continue
             icon, ar_title, en_title = type_info.get(t, ("💡", "", ""))
-            with st.expander(f"{icon} **{ar_title}** — {en_title}  ‏({len(group)})", expanded=(t in ("risk", "advisor"))):
+            label = f"{icon} **{ar_title}** — {en_title}  ‏({len(group)})" if ar_title else f"{icon} **{en_title}**  ‏({len(group)})"
+            with st.expander(label, expanded=(t in ("risk", "advisor"))):
                 inner_cols = st.columns(min(3, len(group)))
                 for j, rec in enumerate(group):
                     prio = rec.get("priority", "low")

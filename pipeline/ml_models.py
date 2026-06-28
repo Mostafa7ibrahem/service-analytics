@@ -445,20 +445,6 @@ def generate_recommendations(dfs, ml_results):
     except Exception:
         pass
 
-    # ── 4. 👥 Customer Retention ──
-    try:
-        ch = ml_results.get("churn_predictor")
-        if ch:
-            acc = ch.get("accuracy", 0)
-            recs.append({
-                "type": "retention",
-                "title": "👥 عملاء معرضون للخسارة",
-                "detail": f"نموذج الولاء بدقة {acc:.0%}. العملاء قليلو الطلب ومرتفعو الإلغاء الأكثر عرضة للترك. قدّم خصومات وعروض.",
-                "priority": "high",
-            })
-    except Exception:
-        pass
-
     # ── 5. ⚠️ Business Risk Detection ──
     try:
         o = dfs.get("orders")
@@ -541,7 +527,7 @@ def generate_recommendations(dfs, ml_results):
         if insights:
             recs.append({
                 "type": "advisor",
-                "title": "🧠 ملخص المستشار الذكي",
+                "title": "🧠 AI Business Advisor",
                 "detail": " • ".join(insights),
                 "priority": "medium",
             })
