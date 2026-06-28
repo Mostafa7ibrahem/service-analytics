@@ -415,7 +415,6 @@ PAGES = [
     ("👥  Customer & Order Funnel", "customer"),
     ("💰  Financial & Payment", "financial"),
     ("🤖  ML Models", "ml"),
-    ("🔗  Correlations", "corr"),
 ]
 
 # ──────────────────────────────────────
@@ -647,20 +646,6 @@ def page_exec():
                      color_discrete_sequence=["#2ecc71", "#e74c3c", "#f39c12", "#3498db"])
         wrap_chart(fig)
 
-    # ── 4. Satisfaction Trend ──
-    st.markdown("<div class='section-title'>📈 Satisfaction Trend — اتجاه رضا العملاء</div>", unsafe_allow_html=True)
-    sts = ins.get("satisfaction_trend")
-    if sts:
-        df = pd.DataFrame(sts)
-        fig = px.line(df, x="month", y="avg_rating", markers=True,
-                      title="",
-                      range_y=[0, 5])
-        fig.add_hline(y=4.0, line_dash="dash", line_color="rgba(46,204,113,0.4)",
-                      annotation_text="Target 4.0", annotation_position="bottom right")
-        fig.update_traces(line=dict(width=2.5, color="#2ecc71"),
-                          fill="tozeroy", fillcolor="rgba(46,204,113,0.08)")
-        wrap_chart(fig)
-
 
 # ──────────────────────────────────────
 #  PAGE 2 — WORKFORCE & SERVICES
@@ -785,28 +770,6 @@ def page_workforce():
             fig.update_layout(yaxis=dict(range=[0, 100]))
             wrap_chart(fig)
 
-    # ── Experience vs Rating ──
-    st.markdown("<div class='section-title'>🎓 Experience vs Rating — الخبرة والتقييم لكل مهنة</div>", unsafe_allow_html=True)
-    evr = ins.get("exp_vs_rating")
-    if evr:
-        df = pd.DataFrame(evr)
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=df["profession"], y=df["avg_experience"],
-                             name="🎓 Experience (yrs)",
-                             marker_color="rgba(52,152,219,0.8)", yaxis="y"))
-        fig.add_trace(go.Bar(x=df["profession"], y=df["avg_rating"],
-                             name="⭐ Rating (1-5)",
-                             marker_color="rgba(46,204,113,0.8)", yaxis="y2"))
-        fig.update_layout(
-            yaxis=dict(title="🎓 Years", side="left", gridcolor=_theme_colors()["grid"]),
-            yaxis2=dict(title="⭐ Rating", overlaying="y", side="right",
-                        gridcolor=_theme_colors()["grid"]),
-            barmode="group",
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color=_theme_colors()["font"], size=11),
-            legend=dict(orientation="h", y=1.15),
-        )
-        wrap_chart(fig)
 
     # ── 3. Worker Utilization Gap ──
     st.markdown("<div class='section-title'>⚡ Utilization Gap — فجوة استغلال العمال</div>", unsafe_allow_html=True)
@@ -843,28 +806,6 @@ def page_workforce():
         )
         wrap_chart(fig)
 
-    # ── 4. Service Revenue & Cancellation ──
-    st.markdown("<div class='section-title'>💰 Revenue & Cancellation — الإيرادات والإلغاء حسب الخدمة</div>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    src = ins.get("service_revenue_cancel")
-    if src:
-        df = pd.DataFrame(src)
-        cat_col = next((c for c in df.columns if c.lower() == "category"), "service")
-        fig = px.bar(df, x=cat_col, y=["total_orders", "cancelled"],
-                     title="📦 Orders & Cancellations by Service",
-                     barmode="group",
-                     color_discrete_map={"total_orders": "#2ecc71", "cancelled": "#ff6b6b"})
-        with c1:
-            wrap_chart(fig)
-        if "revenue" in df.columns:
-            fig2 = px.bar(df, x=cat_col, y="revenue",
-                          color="cancel_rate",
-                          title="💰 Revenue & ❌ Cancellation Rate",
-                          color_continuous_scale="RdYlGn_r",
-                          text=df["cancel_rate"].apply(lambda x: f"{x}%"))
-            fig2.update_traces(textposition="outside")
-            with c2:
-                wrap_chart(fig2)
 
     # ── 5. Service Demand (sorted bar) ──
     st.markdown("<div class='section-title'>📈 Service Demand — الطلب على الخدمات</div>", unsafe_allow_html=True)
@@ -1432,48 +1373,6 @@ def page_ml():
 
 
 # ──────────────────────────────────────
-#  PAGE 6 — CORRELATIONS
-# ──────────────────────────────────────
-
-def page_corr():
-    corr = st.session_state.get("correlations",{})
-    dfs = st.session_state.dataframes
-    page_header("🔗 Correlations", "الارتباطات والعلاقات بين المتغيرات")
-    if not corr:
-        st.info("Not enough numeric data for correlations.")
-        return
-    for k, v in corr.items():
-        if not v:
-            continue
-        icon = "🔗"
-        st.markdown(f"<div class='section-title'>{icon} {k.replace('_',' ').title()}</div>",
-                    unsafe_allow_html=True)
-        pairs = sorted(v.items(), key=lambda x: abs(x[1]), reverse=True)[:15]
-        df = pd.DataFrame(pairs, columns=["Pair","Correlation"])
-        fig = px.bar(df, x="Correlation", y="Pair", orientation="h",
-                     title="Top Correlations", color="Correlation",
-                     color_continuous_scale="RdBu_r", range_color=[-1,1])
-        wrap_chart(fig)
-    o = dfs.get("orders")
-    if o is not None and len(o) > 1:
-        n = o.select_dtypes(include=[np.number])
-        if len(n.columns) > 1:
-            c = n.corr()
-            fig = go.Figure(data=go.Heatmap(
-                z=c.values, x=c.columns, y=c.columns,
-                colorscale="RdBu_r", zmin=-1, zmax=1,
-                text=c.round(2).values, texttemplate="%{text}",
-                textfont=dict(size=9, color=_theme_colors()["title"])
-            ))
-            fig.update_layout(
-                title="Correlation Heatmap", height=600,
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color=_theme_colors()["font"], size=10),
-            )
-            wrap_chart(fig)
-
-
-# ──────────────────────────────────────
 #  SIDEBAR NAVIGATION
 # ──────────────────────────────────────
 
@@ -1575,5 +1474,3 @@ else:
         page_financial()
     elif page == "ml":
         page_ml()
-    elif page == "corr":
-        page_corr()
