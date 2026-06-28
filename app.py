@@ -29,7 +29,6 @@ from pipeline.analysis import (
     exec_kpis, exec_insights,
     workforce_kpis, workforce_insights,
     customer_kpis, customer_insights,
-    financial_kpis, financial_insights,
     compute_correlations,
 )
 from pipeline.ml_models import train_models
@@ -413,7 +412,6 @@ PAGES = [
     ("📈  Executive Dashboard", "exec"),
     ("👷  Workforce & Services", "workforce"),
     ("👥  Customer & Order Funnel", "customer"),
-    ("💰  Financial & Payment", "financial"),
     ("🤖  ML Models", "ml"),
 ]
 
@@ -511,8 +509,6 @@ def upload_page():
                         st.session_state.workforce_insights = workforce_insights(dfs)
                         st.session_state.customer_kpis = customer_kpis(dfs)
                         st.session_state.customer_insights = customer_insights(dfs)
-                        st.session_state.financial_kpis = financial_kpis(dfs)
-                        st.session_state.financial_insights = financial_insights(dfs)
                         st.session_state.correlations = compute_correlations(dfs)
                         st.session_state.ml_results = train_models(dfs)
                         st.session_state.loaded = True
@@ -524,8 +520,6 @@ def upload_page():
                             "workforce_insights": st.session_state.workforce_insights,
                             "customer_kpis": st.session_state.customer_kpis,
                             "customer_insights": st.session_state.customer_insights,
-                            "financial_kpis": st.session_state.financial_kpis,
-                            "financial_insights": st.session_state.financial_insights,
                             "correlations": st.session_state.correlations,
                             "ml_results": st.session_state.ml_results,
                         })
@@ -997,126 +991,6 @@ def page_customer():
 #  PAGE 4 — FINANCIAL & PAYMENT
 # ──────────────────────────────────────
 
-def page_financial():
-    page_header("💰 Financial & Payment Analysis", "التحليل المالي وعمليات الدفع")
-    _filter_bar("financial")
-
-    dfs = _filter_orders(st.session_state.dataframes, "financial")
-    orders = dfs.get("orders")
-
-    # Extra filters
-    cat_options = ["All"]
-    if orders is not None:
-        cat_col = next((c for c in orders.columns if c.lower() == "category"), None)
-        if cat_col:
-            cat_options += sorted(orders[cat_col].dropna().unique())
-    svc_sel = st.session_state.filters.setdefault("f_financial_service", "All")
-
-    cols = st.columns([2, 2])
-    with cols[0]:
-        svc_sel = st.selectbox("🏷️ Service — الخدمة", cat_options,
-                               index=cat_options.index(svc_sel) if svc_sel in cat_options else 0,
-                               key="fi_svc")
-
-    st.session_state.filters["f_financial_service"] = svc_sel
-
-    if svc_sel != "All" and orders is not None:
-        cat_col = next((c for c in orders.columns if c.lower() == "category"), None)
-        if cat_col:
-            orders = orders[orders[cat_col] == svc_sel]
-    dfs["orders"] = orders
-
-    k = financial_kpis(dfs)
-    growth = k.get("monthly_growth", 0)
-    growth_str = f"+{growth}%" if growth > 0 else f"{growth}%"
-    growth_icon = "📈" if growth > 0 else "📉"
-    render_kpis([
-        ("💰", f"${k.get('total_collected',0):,.0f}", "Total Collected", "إجمالي المحصل"),
-        ("💵", f"${k.get('avg_transaction_value',0):,.2f}", "Avg Commission", "متوسط العمولة"),
-        ("📊", f"{k.get('effective_rate',0)}%", "Effective Rate", "نسبة العمولة الفعلية"),
-        ("📈", f"${k.get('avg_daily_commission',0):,.2f}", "Avg Daily Commission", "متوسط العمولة اليومي"),
-        ("💎", f"${k.get('max_transaction',0):,.2f}", "Max Commission", "أعلى عمولة"),
-        (growth_icon, growth_str, "Monthly Growth", "نمو الإيرادات الشهري"),
-    ])
-    st.divider()
-    ins = financial_insights(dfs)
-
-    # ── 1. Revenue & Commission Trends ──
-    st.markdown("<div class='section-title'>📈 Revenue & Commission Trends — اتجاهات الإيرادات والعمولات</div>", unsafe_allow_html=True)
-    rct = ins.get("revenue_commission_trends")
-    if rct:
-        df = pd.DataFrame(rct)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df["month"], y=df["revenue"],
-                                 name="💰 Commission",
-                                 mode="lines+markers",
-                                 marker=dict(color="#2ecc71", size=8),
-                                 line=dict(color="#2ecc71", width=3),
-                                 yaxis="y"))
-        fig.update_layout(
-            title="Monthly Commission Revenue",
-            yaxis=dict(title="💰 Commission ($)", side="left",
-                       gridcolor=_theme_colors()["grid"]),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color=_theme_colors()["font"], size=11),
-            legend=dict(orientation="h", y=1.15),
-        )
-        wrap_chart(fig)
-
-    # ── 3. Top 5 Earning Workers ──
-    st.markdown("<div class='section-title'>👷 Top 5 Earning Workers — أعلى 5 عاملين أرباحاً</div>", unsafe_allow_html=True)
-    tew = ins.get("top_earning_workers")
-    if tew:
-        df = pd.DataFrame(tew)
-        name_col = "name" if "name" in df.columns else "username"
-        fig = px.bar(df, x="total_commission", y=name_col, orientation="h",
-                     title="",
-                     color="total_commission", color_continuous_scale="greens",
-                     text="total_commission")
-        fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside")
-        fig.update_layout(yaxis=dict(autorange="reversed"), height=500)
-        wrap_chart(fig)
-
-    # ── 4 & 5. Revenue by Service + Revenue by Governorate ──
-    st.markdown("<div class='section-title'>💰 Revenue by Service & Governorate — الإيرادات حسب الخدمة والمحافظة</div>", unsafe_allow_html=True)
-    col_c, col_d = st.columns(2)
-    with col_c:
-        rbs = ins.get("revenue_by_service")
-        if rbs:
-            df = pd.DataFrame(rbs)
-            fig = px.bar(df, x="service", y="revenue",
-                         title="",
-                         color="revenue", color_continuous_scale="greens",
-                         text="revenue")
-            fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside")
-            wrap_chart(fig)
-    with col_d:
-        rbg = ins.get("revenue_by_governorate")
-        if rbg:
-            df = pd.DataFrame(rbg)
-            fig = px.bar(df, x="revenue", y="governorate", orientation="h",
-                         title="",
-                         color="revenue", color_continuous_scale="blues",
-                         text="revenue")
-            fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside")
-            fig.update_layout(yaxis=dict(autorange="reversed"))
-            wrap_chart(fig)
-
-    # ── 6. Commission by Day of Week ──
-    st.markdown("<div class='section-title'>📅 Commission by Day of Week — العمولة حسب أيام الأسبوع</div>", unsafe_allow_html=True)
-    cbd = ins.get("commission_by_dow")
-    if cbd:
-        df = pd.DataFrame(cbd)
-        fig = px.bar(df, x="day", y="commission",
-                     color="commission", color_continuous_scale="greens",
-                     text="commission")
-        fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside")
-        fig.update_layout(xaxis=dict(categoryorder="array",
-                                     categoryarray=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]))
-        wrap_chart(fig)
-
-
 
 # ──────────────────────────────────────
 #  PAGE 5 — ML MODELS
@@ -1497,7 +1371,5 @@ else:
         page_workforce()
     elif page == "customer":
         page_customer()
-    elif page == "financial":
-        page_financial()
     elif page == "ml":
         page_ml()
