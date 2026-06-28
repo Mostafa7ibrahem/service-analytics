@@ -500,31 +500,6 @@ def generate_recommendations(dfs, ml_results):
     except Exception:
         pass
 
-    # ── 6. 🎯 Best Worker Assignment ──
-    try:
-        o = dfs.get("orders")
-        w = dfs.get("workers")
-        if o is not None and w is not None:
-            prof_c = _c(w, "profession")
-            cat_c = _c(o, "category")
-            ar = _c(w, "average_rating")
-            nm = _c(w, "name")
-            un = _c(w, "username")
-            if prof_c and cat_c and ar:
-                for svc in o[cat_c].value_counts().head(5).index:
-                    svc_w = w[w[prof_c] == svc] if svc in w[prof_c].values else None
-                    if svc_w is not None and len(svc_w) >= 3:
-                        top = svc_w.nlargest(3, ar)
-                        names = [f"{row.get(nm) or row.get(un, '?')} ({row[ar]:.1f})" for _, row in top.iterrows()]
-                        recs.append({
-                            "type": "assignment",
-                            "title": f"🎯 أفضل عمال لـ {svc}",
-                            "detail": f"1. {names[0]} | 2. {names[1]} | 3. {names[2]} — اخترهم لزيادة نسبة الإتمام.",
-                            "priority": "low",
-                        })
-    except Exception:
-        pass
-
     # ── 7. 📈 Future Demand Forecast ──
     try:
         fc = demand_forecast(dfs)

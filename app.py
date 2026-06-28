@@ -1143,13 +1143,12 @@ def page_ml():
             "revenue":       ("💰", "فرص الربح", "Revenue Opportunity"),
             "retention":     ("👥", "الاحتفاظ بالعملاء", "Customer Retention"),
             "risk":          ("⚠️", "اكتشاف المخاطر", "Business Risk Detection"),
-            "assignment":    ("🎯", "تعيين العمال", "Best Worker Assignment"),
             "future_demand": ("📈", "توقعات الطلب", "Future Demand Forecast"),
             "advisor":       ("🧠", "المستشار الذكي", "AI Business Advisor"),
         }
         badge_colors = {"high": "#e74c3c", "medium": "#f39c12", "low": "#2ecc71"}
         badge_text = {"high": "🔴 عالية", "medium": "🟡 متوسطة", "low": "🟢 منخفضة"}
-        order = ["expansion", "workforce", "revenue", "retention", "risk", "assignment", "future_demand", "advisor"]
+        order = ["expansion", "workforce", "revenue", "retention", "risk", "future_demand", "advisor"]
 
         for t in order:
             group = [r for r in recs if r.get("type") == t]
