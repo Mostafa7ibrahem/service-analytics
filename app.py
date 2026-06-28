@@ -609,7 +609,7 @@ def page_exec():
     st.divider()
     ins = exec_insights(dfs)
 
-    # ── 1 & 2. Best Services + Province Distribution ──
+    # ── 1 & 2. Best Services ──
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("<div class='section-title'>🏆 Best Services — الخدمات الأعلى طلباً</div>", unsafe_allow_html=True)
@@ -623,13 +623,6 @@ def page_exec():
             fig.update_traces(textposition="outside")
             fig.update_layout(yaxis=dict(autorange="reversed"), height=500)
             wrap_chart(fig)
-    with col_b:
-        st.markdown("<div class='section-title'>📍 Province Distribution — توزيع العملاء حسب المحافظة</div>", unsafe_allow_html=True)
-        ps = ins.get("province_stats")
-        if ps:
-            df = pd.DataFrame(ps)
-            cols = ins.get("province_cols", df.columns.tolist())
-            st.dataframe(df, hide_index=True, use_container_width=True, height=500)
 
     # ── 3. Process Pie ──
     st.markdown("<div class='section-title'>🔄 Order Status Flow — توزيع حالات الطلبات</div>", unsafe_allow_html=True)
