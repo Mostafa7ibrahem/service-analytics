@@ -629,7 +629,8 @@ def page_exec():
         if ps:
             df = pd.DataFrame(ps)
             cols = ins.get("province_cols", df.columns.tolist())
-            st.dataframe(df, hide_index=True, use_container_width=True, height=500)
+            show_cols = [c for c in cols if c.lower() in ("governorate", "client", "worker", "total")]
+            st.dataframe(df[show_cols], hide_index=True, use_container_width=True, height=500)
 
     # ── 3. Process Pie ──
     st.markdown("<div class='section-title'>🔄 Order Status Flow — توزيع حالات الطلبات</div>", unsafe_allow_html=True)
